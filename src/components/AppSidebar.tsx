@@ -1,4 +1,4 @@
-import { Building, MapPin, Search, Users } from "lucide-react";
+import { Building2, LayoutDashboard, Users, LineChart, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,17 +9,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useNavigate } from "react-router-dom";
 
 const menuItems = [
   {
-    title: "Floor Plan",
-    icon: Building,
+    title: "Dashboard",
+    icon: LayoutDashboard,
     url: "/",
   },
   {
-    title: "Find Seat",
-    icon: Search,
-    url: "/find",
+    title: "Floor Plan",
+    icon: Building2,
+    url: "/floor-plan",
   },
   {
     title: "Employees",
@@ -27,30 +28,41 @@ const menuItems = [
     url: "/employees",
   },
   {
-    title: "Locations",
-    icon: MapPin,
-    url: "/locations",
+    title: "Analytics",
+    icon: LineChart,
+    url: "/analytics",
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    url: "/settings",
   },
 ];
 
 export function AppSidebar() {
+  const navigate = useNavigate();
+
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Office Planner</SidebarGroupLabel>
+          <SidebarGroupLabel>Seat Planner</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </a>
+                  <SidebarMenuButton onClick={() => navigate(item.url)} className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton className="flex items-center gap-3 text-red-500">
+                  <LogOut className="h-5 w-5" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
