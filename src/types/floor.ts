@@ -13,4 +13,13 @@ export interface SeatBooking {
   bookingDate: string;
   floorId: number;
   location: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestType: 'booking' | 'swap';
+}
+
+export interface User {
+  id: string;
+  email: string;
+  role: 'admin' | 'employee';
+  name: string;
 }

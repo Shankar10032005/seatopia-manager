@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
+import { User } from '@/types/floor';
 
 type AuthContextType = {
   user: User | null;
@@ -11,40 +11,36 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Demo users for testing
+const demoUsers = {
+  admin: {
+    id: 'admin-demo',
+    email: 'admin@example.com',
+    name: 'Admin User',
+    role: 'admin'
+  } as User,
+  employee: {
+    id: 'employee-demo',
+    email: 'employee@example.com',
+    name: 'Employee User',
+    role: 'employee'
+  } as User
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>({ 
-    id: 'demo',
-    email: 'demo@example.com',
-    created_at: new Date().toISOString(),
-    aud: 'authenticated',
-    role: 'authenticated'
-  } as User);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // For demo purposes, we'll keep the demo user logged in
-    if (window.location.pathname !== '/login') {
-      setUser({ 
-        id: 'demo',
-        email: 'demo@example.com',
-        created_at: new Date().toISOString(),
-        aud: 'authenticated',
-        role: 'authenticated'
-      } as User);
-    }
-  }, []);
-
   const signIn = async (email: string, password: string) => {
-    if (email === 'demo@example.com' && password === 'demo123') {
-      setUser({ 
-        id: 'demo',
-        email: 'demo@example.com',
-        created_at: new Date().toISOString(),
-        aud: 'authenticated',
-        role: 'authenticated'
-      } as User);
+    // Demo authentication logic
+    if (email === 'admin@example.com' && password === 'admin123') {
+      setUser(demoUsers.admin);
+      return;
+    } else if (email === 'employee@example.com' && password === 'employee123') {
+      setUser(demoUsers.employee);
       return;
     }
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
