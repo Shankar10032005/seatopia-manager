@@ -12,24 +12,39 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>({ 
+    id: 'demo',
+    email: 'demo@example.com',
+    created_at: new Date().toISOString(),
+    aud: 'authenticated',
+    role: 'authenticated'
+  } as User);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    // For demo purposes, we'll keep the demo user logged in
+    if (window.location.pathname !== '/login') {
+      setUser({ 
+        id: 'demo',
+        email: 'demo@example.com',
+        created_at: new Date().toISOString(),
+        aud: 'authenticated',
+        role: 'authenticated'
+      } as User);
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (email === 'demo@example.com' && password === 'demo123') {
+      setUser({ 
+        id: 'demo',
+        email: 'demo@example.com',
+        created_at: new Date().toISOString(),
+        aud: 'authenticated',
+        role: 'authenticated'
+      } as User);
+      return;
+    }
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    setUser(null);
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

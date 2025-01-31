@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
@@ -15,16 +15,17 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // For demo purposes, bypass authentication if using demo credentials
+    if (email === 'demo@example.com' && password === 'demo123') {
+      navigate('/');
+      return;
+    }
+
     try {
       await signIn(email, password);
       navigate('/');
     } catch (error) {
-      // For demo purposes, we'll bypass the actual authentication
-      if (email === 'demo@example.com' && password === 'demo123') {
-        navigate('/');
-        return;
-      }
-      
       toast({
         title: "Error",
         description: "Invalid login credentials",
