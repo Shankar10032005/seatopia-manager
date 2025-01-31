@@ -23,9 +23,9 @@ interface Seat {
 
 const locations = ["Mumbai", "Chennai", "Bangalore", "Kolkata", "Kochi"];
 
-const floors: Floor[] = locations.flatMap((location) =>
+const floors: Floor[] = locations.flatMap((location, locationIndex) =>
   Array.from({ length: 3 }, (_, i) => ({
-    id: location.toLowerCase().replace(/\s+/g, "-") + `-${i + 1}`,
+    id: locationIndex * 3 + i + 1, // Generate numeric IDs
     name: `Floor ${i + 1}`,
     location,
     totalSeats: 100,
@@ -50,7 +50,7 @@ const generateSeatsForFloor = (floor: Floor): Seat[] => {
       y: spacing.margin + row * spacing.y,
       status: Math.random() > 0.7 ? "occupied" : "available",
       location: floor.location,
-      floorId: parseInt(floor.id.toString()),
+      floorId: floor.id,
       powerConsumption: Number((Math.random() * 5).toFixed(2)),
       waterConsumption: Number((Math.random() * 2).toFixed(2)),
     });
