@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
+import { FloorSelector } from "./FloorSelector";
+import { Floor } from "@/types/floor";
 
 interface Seat {
   id: string;
@@ -14,40 +16,49 @@ interface Seat {
   employeeId?: string;
   bookingDate?: string;
   location: string;
+  floorId: number;
   powerConsumption: number;
   waterConsumption: number;
 }
 
-const locations = [
-  "Mumbai",
-  "Chennai",
-  "Bangalore",
-  "Kolkata",
-  "Kochi"
-];
+const locations = ["Mumbai", "Chennai", "Bangalore", "Kolkata", "Kochi"];
 
-// Generate 200 seats per location = 1000 seats total
-const generateSeats = (): Seat[] => {
+const floors: Floor[] = locations.flatMap((location) =>
+  Array.from({ length: 3 }, (_, i) => ({
+    id: location.toLowerCase().replace(/\s+/g, "-") + `-${i + 1}`,
+    name: `Floor ${i + 1}`,
+    location,
+    totalSeats: 100,
+  }))
+);
+
+const generateSeatsForFloor = (floor: Floor): Seat[] => {
   const seats: Seat[] = [];
-  locations.forEach((location) => {
-    for (let i = 1; i <= 200; i++) {
-      const row = Math.floor((i - 1) / 20);
-      const col = (i - 1) % 20;
-      seats.push({
-        id: `${location[0]}${i}`,
-        x: 50 + col * 60,
-        y: 50 + row * 60,
-        status: Math.random() > 0.7 ? "occupied" : "available",
-        location,
-        powerConsumption: Number((Math.random() * 5).toFixed(2)),
-        waterConsumption: Number((Math.random() * 2).toFixed(2)),
-      });
-    }
-  });
+  const seatsPerRow = 10;
+  const spacing = {
+    x: 80,
+    y: 80,
+    margin: 20,
+  };
+
+  for (let i = 0; i < floor.totalSeats; i++) {
+    const row = Math.floor(i / seatsPerRow);
+    const col = i % seatsPerRow;
+    seats.push({
+      id: `${floor.location[0]}${floor.id}-${i + 1}`,
+      x: spacing.margin + col * spacing.x,
+      y: spacing.margin + row * spacing.y,
+      status: Math.random() > 0.7 ? "occupied" : "available",
+      location: floor.location,
+      floorId: parseInt(floor.id.toString()),
+      powerConsumption: Number((Math.random() * 5).toFixed(2)),
+      waterConsumption: Number((Math.random() * 2).toFixed(2)),
+    });
+  }
   return seats;
 };
 
-const initialSeats = generateSeats();
+const initialSeats = floors.flatMap(generateSeatsForFloor);
 
 export function FloorPlan() {
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
@@ -55,6 +66,7 @@ export function FloorPlan() {
   const [bookingEmployee, setBookingEmployee] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(locations[0]);
+  const [selectedFloor, setSelectedFloor] = useState(1);
   const { toast } = useToast();
 
   const handleSeatClick = (seatId: string) => {
@@ -94,7 +106,10 @@ export function FloorPlan() {
     });
   };
 
-  const filteredSeats = seats.filter((seat) => seat.location === selectedLocation);
+  const locationFloors = floors.filter((floor) => floor.location === selectedLocation);
+  const filteredSeats = seats.filter(
+    (seat) => seat.location === selectedLocation && seat.floorId === selectedFloor
+  );
 
   return (
     <div className="space-y-6">
@@ -113,54 +128,31 @@ export function FloorPlan() {
             <span className="text-sm">Reserved</span>
           </div>
         </div>
-        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select location" />
-          </SelectTrigger>
-          <SelectContent>
-            {locations.map((location) => (
-              <SelectItem key={location} value={location}>
-                {location}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-4">
+          <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select location" />
+            </SelectTrigger>
+            <SelectContent>
+              {locations.map((location) => (
+                <SelectItem key={location} value={location}>
+                  {location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FloorSelector
+            floors={locationFloors}
+            selectedFloor={selectedFloor}
+            onFloorChange={setSelectedFloor}
+          />
+        </div>
       </div>
 
       <div className="relative w-full h-[600px] bg-white rounded-lg shadow-lg p-6 overflow-auto">
         <div className="absolute inset-0 p-6">
           {filteredSeats.map((seat) => (
             <Dialog key={seat.id}>
-              <DialogTrigger asChild>
-                <div
-                  className={`absolute w-12 h-12 rounded-lg cursor-pointer transition-all transform hover:scale-105 ${
-                    seat.status === "available"
-                      ? "bg-green-100 border-2 border-green-500"
-                      : seat.status === "occupied"
-                      ? "bg-red-100 border-2 border-red-500"
-                      : "bg-yellow-100 border-2 border-yellow-500"
-                  } ${selectedSeat === seat.id ? "ring-2 ring-blue-500" : ""}`}
-                  style={{
-                    left: `${seat.x}px`,
-                    top: `${seat.y}px`,
-                  }}
-                  onClick={() => handleSeatClick(seat.id)}
-                >
-                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-medium">
-                    {seat.id}
-                  </div>
-                  {seat.employee && (
-                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-600 whitespace-nowrap">
-                      {seat.employee}
-                    </div>
-                  )}
-                  {seat.bookingDate && (
-                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">
-                      {seat.bookingDate}
-                    </div>
-                  )}
-                </div>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Seat {seat.id}</DialogTitle>
@@ -169,6 +161,7 @@ export function FloorPlan() {
                   <div className="space-y-2">
                     <p>Status: {seat.status}</p>
                     <p>Location: {seat.location}</p>
+                    <p>Floor: {Math.floor(seat.floorId)}</p>
                     {seat.employee && <p>Assigned to: {seat.employee}</p>}
                     {seat.employeeId && <p>Employee ID: {seat.employeeId}</p>}
                     {seat.bookingDate && <p>Booked for: {seat.bookingDate}</p>}
