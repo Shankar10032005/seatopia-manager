@@ -7,6 +7,7 @@ import { useToast } from "./ui/use-toast";
 import { FloorSelector } from "./FloorSelector";
 import { Floor } from "@/types/floor";
 import { useAuth } from "@/contexts/AuthContext";
+import { addDays, format, isAfter, isBefore } from "date-fns";
 
 interface Seat {
   id: string;
@@ -126,6 +127,16 @@ const generateSeatsForFloor = (floor: Floor): Seat[] => {
 
 const initialSeats = floors.flatMap(generateSeatsForFloor);
 
+interface SwapRequest {
+  id: string;
+  fromSeatId: string;
+  toSeatId: string;
+  employeeId: string;
+  employeeName: string;
+  status: "pending" | "approved" | "rejected";
+  requestDate: string;
+}
+
 export function FloorPlan() {
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
@@ -133,24 +144,71 @@ export function FloorPlan() {
   const [employeeId, setEmployeeId] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(locations[0]);
   const [selectedFloor, setSelectedFloor] = useState(1);
+  const [bookingDate, setBookingDate] = useState("");
+  const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleSeatClick = (seatId: string) => {
+    const seat = seats.find(s => s.id === seatId);
+    if (seat?.status === "occupied" && user?.role !== "admin") {
+      handleSwapRequest(seatId);
+      return;
+    }
     setSelectedSeat(seatId);
   };
 
+  const handleSwapRequest = (toSeatId: string) => {
+    if (!user) return;
+
+    const newRequest: SwapRequest = {
+      id: `swap-${Date.now()}`,
+      fromSeatId: seats.find(s => s.employeeId === user.id)?.id || "",
+      toSeatId,
+      employeeId: user.id,
+      employeeName: user.name,
+      status: "pending",
+      requestDate: new Date().toISOString(),
+    };
+
+    setSwapRequests([...swapRequests, newRequest]);
+    toast({
+      title: "Success",
+      description: "Swap request sent to admin for approval",
+    });
+  };
+
   const handleBookSeat = (seatId: string) => {
-    if (!bookingEmployee.trim() || !employeeId.trim()) {
+    if (!bookingEmployee.trim() || !employeeId.trim() || !bookingDate) {
       toast({
         title: "Error",
-        description: "Please enter both employee name and ID",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if user is admin or if it's their own booking
+    const selectedDate = new Date(bookingDate);
+    const maxDate = addDays(new Date(), 7);
+
+    if (isAfter(selectedDate, maxDate)) {
+      toast({
+        title: "Error",
+        description: "Booking date cannot be more than a week in advance",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isBefore(selectedDate, new Date())) {
+      toast({
+        title: "Error",
+        description: "Cannot book seats for past dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (user?.role !== 'admin' && employeeId !== user?.id) {
       toast({
         title: "Error",
@@ -168,13 +226,15 @@ export function FloorPlan() {
               status: user?.role === 'admin' ? "reserved" : "occupied",
               employee: bookingEmployee,
               employeeId: employeeId,
-              bookingDate: new Date().toISOString().split("T")[0],
+              bookingDate,
             }
           : seat
       )
     );
+
     setBookingEmployee("");
     setEmployeeId("");
+    setBookingDate("");
     setSelectedSeat(null);
     
     toast({
@@ -300,6 +360,13 @@ export function FloorPlan() {
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value)}
                   />
+                  <Input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    max={format(addDays(new Date(), 7), 'yyyy-MM-dd')}
+                  />
                   <Button
                     onClick={() => handleBookSeat(seat.id)}
                     className="w-full"
@@ -312,6 +379,58 @@ export function FloorPlan() {
           </DialogContent>
         </Dialog>
       ))}
+
+      {user?.role === 'admin' && swapRequests.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-4">Pending Swap Requests</h2>
+          <div className="space-y-4">
+            {swapRequests.map((request) => (
+              <div key={request.id} className="bg-white p-4 rounded-lg shadow">
+                <p>Employee: {request.employeeName}</p>
+                <p>From Seat: {request.fromSeatId}</p>
+                <p>To Seat: {request.toSeatId}</p>
+                <p>Status: {request.status}</p>
+                <div className="mt-2 space-x-2">
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      // Handle approve logic
+                      setSwapRequests(prev =>
+                        prev.map(r =>
+                          r.id === request.id ? { ...r, status: "approved" } : r
+                        )
+                      );
+                      toast({
+                        title: "Success",
+                        description: "Swap request approved",
+                      });
+                    }}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      // Handle reject logic
+                      setSwapRequests(prev =>
+                        prev.map(r =>
+                          r.id === request.id ? { ...r, status: "rejected" } : r
+                        )
+                      );
+                      toast({
+                        title: "Success",
+                        description: "Swap request rejected",
+                      });
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

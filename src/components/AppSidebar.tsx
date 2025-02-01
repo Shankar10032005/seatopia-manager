@@ -10,8 +10,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-const menuItems = [
+const adminMenuItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
@@ -39,8 +40,23 @@ const menuItems = [
   },
 ];
 
+const employeeMenuItems = [
+  {
+    title: "Book Seat",
+    icon: Building2,
+    url: "/floor-plan",
+  },
+];
+
 export function AppSidebar() {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const menuItems = user?.role === 'admin' ? adminMenuItems : employeeMenuItems;
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <Sidebar>
@@ -58,7 +74,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SidebarMenuButton className="flex items-center gap-3 text-red-500">
+                <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 text-red-500">
                   <LogOut className="h-5 w-5" />
                   <span>Logout</span>
                 </SidebarMenuButton>
