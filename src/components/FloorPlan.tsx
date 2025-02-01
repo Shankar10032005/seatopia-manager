@@ -6,6 +6,7 @@ import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
 import { FloorSelector } from "./FloorSelector";
 import { Floor } from "@/types/floor";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Seat {
   id: string;
@@ -133,6 +134,7 @@ export function FloorPlan() {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]);
   const [selectedFloor, setSelectedFloor] = useState(1);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSeatClick = (seatId: string) => {
     setSelectedSeat(seatId);
@@ -148,12 +150,22 @@ export function FloorPlan() {
       return;
     }
 
+    // Check if user is admin or if it's their own booking
+    if (user?.role !== 'admin' && employeeId !== user?.id) {
+      toast({
+        title: "Error",
+        description: "You can only book seats for yourself",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSeats((prevSeats) =>
       prevSeats.map((seat) =>
         seat.id === seatId
           ? {
               ...seat,
-              status: "reserved",
+              status: user?.role === 'admin' ? "reserved" : "occupied",
               employee: bookingEmployee,
               employeeId: employeeId,
               bookingDate: new Date().toISOString().split("T")[0],
@@ -167,7 +179,7 @@ export function FloorPlan() {
     
     toast({
       title: "Success",
-      description: "Seat booked successfully",
+      description: user?.role === 'admin' ? "Seat reserved successfully" : "Seat booking request sent for approval",
     });
   };
 
@@ -258,7 +270,7 @@ export function FloorPlan() {
       </div>
 
       {filteredSeats.map((seat) => (
-        <Dialog key={seat.id}>
+        <Dialog key={seat.id} open={selectedSeat === seat.id} onOpenChange={() => setSelectedSeat(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Seat {seat.id}</DialogTitle>
@@ -292,7 +304,7 @@ export function FloorPlan() {
                     onClick={() => handleBookSeat(seat.id)}
                     className="w-full"
                   >
-                    Book Seat
+                    {user?.role === 'admin' ? 'Reserve Seat' : 'Request Booking'}
                   </Button>
                 </div>
               )}
